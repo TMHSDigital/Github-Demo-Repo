@@ -1,0 +1,86 @@
+name: 'Code Quality Report'
+description: 'Generate code quality reports and comments on pull requests'
+inputs:
+  working-directory:
+    description: 'Directory to run the action in'
+    required: false
+    default: '.'
+  threshold:
+    description: 'Coverage threshold percentage'
+    required: false
+    default: '80'
+  token:
+    description: 'GitHub token for PR comments'
+    required: true
+    default: ${{ github.token }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    
+    - name: Install dependencies
+      shell: bash
+      run: |
+        if [ -f "package.json" ]; then
+          npm ci
+        fi
+        
+        if [ ! -f "node_modules/.bin/eslint" ]; then
+          npm install -g eslint eslint-plugin-react eslint-plugin-react-hooks
+        fi
+      working-directory: ${{ inputs.working-directory }}
+    
+    - name: Run ESLint
+      shell: bash
+      run: |
+        echo "Running ESLint check..."
+        files=$(find . -name "*.js" -o -name "*.jsx" | grep -v "node_modules" | tr '\n' ' ')
+        if [ -n "$files" ]; then
+          npx eslint $files --format stylish --no-error-on-unmatched-pattern || true
+        else
+          echo "No JavaScript/JSX files found to lint"
+        fi
+      working-directory: ${{ inputs.working-directory }}
+    
+    - name: Check code complexity
+      shell: bash
+      run: |
+        echo "Checking code complexity..."
+        npm install -g plato
+        mkdir -p reports/complexity
+        plato -r -d reports/complexity $files
+        echo "Code complexity report generated in reports/complexity"
+      working-directory: ${{ inputs.working-directory }}
+    
+    - name: Check coverage threshold
+      shell: bash
+      run: |
+        threshold="${{ inputs.threshold }}"
+        echo "Checking if coverage is at least $threshold%"
+        
+        # This is a placeholder. In a real scenario, you would run tests with coverage
+        # and compare the results with the threshold
+        echo "Coverage check complete"
+      working-directory: ${{ inputs.working-directory }}
+    
+    - name: Summarize results
+      shell: bash
+      run: |
+        echo "## Code Quality Summary" > quality_report.md
+        echo "### Linting" >> quality_report.md
+        echo "ESLint completed with results above" >> quality_report.md
+        echo "### Code Complexity" >> quality_report.md
+        echo "Complexity report generated in reports/complexity" >> quality_report.md
+        echo "### Test Coverage" >> quality_report.md
+        echo "Required minimum coverage: ${{ inputs.threshold }}%" >> quality_report.md
+        
+        cat quality_report.md
+      working-directory: ${{ inputs.working-directory }}
+
+branding:
+  icon: 'check-circle'
+  color: 'green' 

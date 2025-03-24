@@ -1,0 +1,69 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 0 * * 0'  # Run weekly at midnight on Sunday
+
+jobs:
+  secret-scan:
+    name: Detect Secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@v3.63.7
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  dependency-scan:
+    name: Scan Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: |
+          cd src/api
+          npm ci
+          cd ../../examples/ui
+          npm ci
+          
+      - name: Run npm audit
+        run: |
+          cd src/api
+          npm audit --audit-level=high || true
+          cd ../../examples/ui
+          npm audit --audit-level=high || true
+          
+      - name: Run OWASP Dependency-Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'GitHub-Demo-Repo'
+          path: '.'
+          format: 'HTML'
+          args: >
+            --failOnCVSS 7
+            --enableRetired
+            
+      - name: Upload report
+        uses: actions/upload-artifact@v3
+        with:
+          name: Dependency Check Report
+          path: ${{ github.workspace }}/reports 

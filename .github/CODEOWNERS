@@ -1,0 +1,25 @@
+# This file defines which users are responsible for code in the repository
+# When a pull request modifies code owned by a specific user, they will be automatically requested as a reviewer
+# Format: file_pattern @username or email
+
+# Default owners for everything
+* @yourusername
+
+# API code owners
+/src/api/ @api-team-lead @backend-developer
+
+# UI code owners
+/examples/ui/ @ui-team-lead @frontend-developer
+
+# Documentation owners
+/docs/ @documentation-lead @yourusername
+
+# GitHub Actions workflows
+/.github/workflows/ @devops-lead @yourusername
+
+# Security related files
+/SECURITY.md @security-team @yourusername
+/.github/scripts/pre-commit-hook.sh @security-team
+
+# Tests
+/tests/ @test-engineer @yourusername 
